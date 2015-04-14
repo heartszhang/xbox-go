@@ -29,7 +29,12 @@ func new_session() http.Client {
 //func disable_redirect(req *http.Request, via []*http.Request) error {
 //	return errors.New("no-redirect")
 //}
-
+func dump_resp(url string, resp *http.Response, err error) {
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println(url, resp.ContentLength, "status: ", resp.StatusCode, ", ", resp.Status)
+}
 func xtstoken(email, passwd string) (xtoken string, err error) {
 	session := new_session()
 	const oauth2_url = "https://login.live.com/oauth20_authorize.srf"
@@ -44,10 +49,10 @@ func xtstoken(email, passwd string) (xtoken string, err error) {
 	}.Encode()
 	//	log.Println(ourl)
 	resp, err := session.Get(ourl)
+	dump_resp(ourl, resp, err)
 	if err != nil {
 		log.Fatal(err)
 	}
-	//	fmt.Println(resp.ContentLength, resp.Status, resp.StatusCode)
 
 	txt, _ := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
@@ -90,10 +95,10 @@ func xtstoken(email, passwd string) (xtoken string, err error) {
 		"i18":          []string{"__Login_Host|1"},
 	}
 	resp, err = session.PostForm(login_url, post_data)
+	dump_resp(login_url, resp, err)
 	if e, ok := err.(*url.Error); err != nil && (!ok || e.Err != disable_redirect) {
 		log.Fatal(err)
 	}
-	//
 	//	fmt.Println(resp.StatusCode, resp.Status, resp.ContentLength)
 	//	fmt.Println(resp.Header)
 
@@ -109,6 +114,7 @@ func xtstoken(email, passwd string) (xtoken string, err error) {
 		return
 	}
 	session.CheckRedirect = nil // enable redirect again
+	log.Println("access-token: ", access_token)
 	//	acctoken, err := authen_access_token(email, passwd, ppft, login_url)
 
 	dss, _ := json.Marshal(map[string]interface{}{
@@ -123,6 +129,7 @@ func xtstoken(email, passwd string) (xtoken string, err error) {
 
 	const authen_url = "https://user.auth.xboxlive.com/user/authenticate"
 	resp, err = session.Post(authen_url, "application/json", bytes.NewReader(dss))
+	dump_resp(authen_url, resp, err)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -135,6 +142,7 @@ func xtstoken(email, passwd string) (xtoken string, err error) {
 			} `json:"xui"`
 		}
 	}
+
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
 		log.Fatal(err)
@@ -142,9 +150,11 @@ func xtstoken(email, passwd string) (xtoken string, err error) {
 	resp.Body.Close()
 
 	uhs, user_token := result.DisplayClaims.Xui[0].Uhs, result.Token
+	log.Println("uhs: ", uhs)
+	log.Println("user-token: ", user_token)
 
 	dss, _ = json.Marshal(map[string]interface{}{
-		"RelyingParty": "https://xaaa.bbtv.cn",
+		"RelyingParty": "http://xboxlive.com", //"https://xaaa.bbtv.cn",
 		"TokenType":    "JWT",
 		"Properties": map[string]interface{}{
 			"UserTokens": []string{user_token},
@@ -154,10 +164,12 @@ func xtstoken(email, passwd string) (xtoken string, err error) {
 
 	const auth_url = "https://xsts.auth.xboxlive.com/xsts/authorize"
 	resp, err = session.Post(auth_url, "application/json", bytes.NewReader(dss))
+	dump_resp(auth_url, resp, err)
 	if err != nil {
 		log.Fatal(err)
 	}
 	err = json.NewDecoder(resp.Body).Decode(&result)
+	log.Println(result)
 	if err != nil {
 		log.Fatal(err)
 	}

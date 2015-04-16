@@ -28,7 +28,9 @@ func dump_resp(url string, resp *http.Response, err error) {
 	if err != nil {
 		log.Println(err)
 	}
-	log.Println(url, resp.ContentLength, "status: ", resp.StatusCode, ", ", resp.Status)
+	if resp != nil {
+		log.Println(url, resp.ContentLength, "status: ", resp.StatusCode, ", ", resp.Status)
+	}
 }
 func xtstoken(email, passwd string) (xtoken string, err error) {
 	session := new_session()

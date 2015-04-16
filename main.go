@@ -24,11 +24,6 @@ func new_session() http.Client {
 	return http.Client{Jar: ckyjar}
 }
 
-//CheckRedirect func(req *Request, via []*Request) error
-// disable redirect for access login-post-url, because we need the first step's location
-//func disable_redirect(req *http.Request, via []*http.Request) error {
-//	return errors.New("no-redirect")
-//}
 func dump_resp(url string, resp *http.Response, err error) {
 	if err != nil {
 		log.Println(err)
